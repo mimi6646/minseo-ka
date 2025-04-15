@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>주식 게임 - 여러 종목</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f1f5f9;
+      padding: 20px;
+      text-align: center;
+    }
+    .container {
+      background: #fff;
+      border-radius: 12px;
+      padding: 30px;
+      max-width: 800px;
+      margin: auto;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    .stock-block {
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    input {
+      width: 60px;
+      margin: 0 5px;
+      padding: 5px;
+    }
+    button {
+      padding: 6px 14px;
+      margin: 5px;
+      border: none;
+      border-radius: 6px;
+      background-color: #4f46e5;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #4338ca;
+    }
+    canvas {
+      max-width: 100%;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📊 다중 종목 주식 게임</h1>
+    <p>📅 현재 날짜: <span id="day">1</span>일차</p>
+    <p>💵 잔액: <span id="cash">₩1,000,000</span></p>
+    <p>📊 총 자산: <span id="total">₩1,000,000</span></p>
+    <button onclick="nextDay()">다음 날 ▶️</button>
+
+    <div id="stocksContainer"></div>
+
+    <canvas id="chartCanvas" height="150"></canvas>
+  </div>
+
+  <script>
+    let day = 1;
+    let cash = 1000000;
+
+    const stocks = {
+      "삼성전자": { price: 50000, owned: 0, history: [50000] },
+      "카카오": { price: 70000, owned: 0, history: [70000] },
+      "네이버": { price: 80000, owned: 0, history: [80000] }
+    };
+
+    const chart = new Chart(document.getElementById("chartCanvas"), {
+      type: 'line',
+      data: {
+        labels: ['1일차'],
+        datasets: Object.keys(stocks).map((name, i) => ({
+          label: name,
+          data: stocks[name].history,
+          borderColor: ['#3b82f6', '#ef4444', '#10b981'][i],
+          fill: false,
+          tension: 0.3
+        }))
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' } },
+        scales: {
+          x: { title: { display: true, text: '일자' }},
+          y: { title: { display: true, text: '주가' }}
+        }
+      }
+    });
+
+    function updateUI() {
+      document.getElementById('day').textContent = day;
+      document.getElementById('cash').textContent = '₩' + cash.toLocaleString();
+
+      const container = document.getElementById('stocksContainer');
+      container.innerHTML = '';
+
+      let total = cash;
+
+      Object.entries(stocks).forEach(([name, stock], index) => {
+        total += stock.owned * stock.price;
+
+        const block = document.createElement('div');
+        block.className = 'stock-block';
+        block.innerHTML = `
+          <h3>${name}</h3>
+          <p>📈 현재 가격: <strong>${stock.price.toLocaleString()}원</strong></p>
+          <p>📦 보유 주식: ${stock.owned}주</p>
+          <input type="number" min="1" value="1" id="qty-${index}">
+          <button onclick="buyStock('${name}', ${index})">매수</button>
+          <button onclick="sellStock('${name}', ${index})">매도</button>
+        `;
+        container.appendChild(block);
+      });
+
+      document.getElementById('total').textContent = '₩' + total.toLocaleString();
+    }
+
+    function nextDay() {
+      day++;
+      chart.data.labels.push(`${day}일차`);
+
+      Object.entries(stocks).forEach(([name, stock]) => {
+        const change = Math.floor(Math.random() * 2001) - 1000; // -1000 ~ +1000
+        stock.price = Math.max(1000, stock.price + change);
+        stock.history.push(stock.price);
+      });
+
+      chart.update();
+      updateUI();
+    }
+
+    function buyStock(name, idx) {
+      const qty = parseInt(document.getElementById(`qty-${idx}`).value);
+      const stock = stocks[name];
+      const cost = qty * stock.price;
+
+      if (cash >= cost) {
+        stock.owned += qty;
+        cash -= cost;
+        updateUI();
+      } else {
+        alert("잔액이 부족합니다.");
+      }
+    }
+
+    function sellStock(name, idx) {
+      const qty = parseInt(document.getElementById(`qty-${idx}`).value);
+      const stock = stocks[name];
+
+      if (stock.owned >= qty) {
+        stock.owned -= qty;
+        cash += qty * stock.price;
+        updateUI();
+      } else {
+        alert("보유 주식이 부족합니다.");
+      }
+    }
+
+    updateUI();
+  </script>
+</body>
+</html>
